@@ -20,18 +20,8 @@ func TestBMSSP_PaperExample(t *testing.T) {
 		g.AddEdge(e.u, e.v, e.w)
 	}
 
-	// Initialize dhat
-	dhat := map[NodeID]Dist{}
-	for i := 0; i < 8; i++ {
-		dhat[NodeID(i)] = Dist(math.Inf(1))
-	}
-	dhat[0] = 0
-
-	S := NewNodeSet()
-	S.Add(0)
-
-	// Run BMSSP with appropriate parameters
-	_, _ = BMSSP(1, 1e9, S, 100, 1, g, dhat)
+	// Use the new convenience function
+	dhat := BMSSPSingleSource(g, 0, 1000)
 
 	expected := []Dist{0, 2, 5, 6, 3, 5, 6, 7}
 	for i := 0; i < 8; i++ {

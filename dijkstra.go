@@ -2,11 +2,12 @@ package bmssp
 
 import "container/heap"
 
-// Standard Dijkstra's algorithm implementation for comparison
+// This file implements standard Dijkstra's algorithm for performance comparison
+// with the BMSSP algorithm.
 
 type dijkstraItem struct {
-	node NodeID
-	dist Dist
+	node  NodeID
+	dist  Dist
 	index int
 }
 
@@ -43,51 +44,59 @@ func (h *dijkstraHeap) update(item *dijkstraItem, dist Dist) {
 	heap.Fix(h, item.index)
 }
 
-// Dijkstra implements standard Dijkstra's shortest path algorithm
+// Dijkstra implements the standard Dijkstra's shortest path algorithm.
+// This function is provided for performance comparison with BMSSP.
+//
+// Parameters:
+//   - g: input graph
+//   - source: source node for shortest path computation
+//
+// Returns:
+//   - map of node IDs to their shortest distances from source
 func Dijkstra(g *Graph, source NodeID) map[NodeID]Dist {
 	dist := make(map[NodeID]Dist)
 	visited := make(map[NodeID]bool)
 	items := make(map[NodeID]*dijkstraItem)
-	
+
 	// Initialize all distances to infinity
 	for u := range g.adj {
 		dist[u] = INF
 		items[u] = &dijkstraItem{node: u, dist: INF}
 	}
-	
+
 	// Also check all destination nodes from edges
 	for _, edges := range g.adj {
 		for _, edge := range edges {
-			if _, exists := dist[edge.V]; !exists {
-				dist[edge.V] = INF
-				items[edge.V] = &dijkstraItem{node: edge.V, dist: INF}
+			if _, exists := dist[edge.To]; !exists {
+				dist[edge.To] = INF
+				items[edge.To] = &dijkstraItem{node: edge.To, dist: INF}
 			}
 		}
 	}
-	
+
 	dist[source] = 0
 	items[source].dist = 0
-	
+
 	// Create priority queue
 	pq := make(dijkstraHeap, 0, len(items))
 	for _, item := range items {
 		heap.Push(&pq, item)
 	}
-	
+
 	for pq.Len() > 0 {
 		item := heap.Pop(&pq).(*dijkstraItem)
 		u := item.node
-		
+
 		if visited[u] {
 			continue
 		}
 		visited[u] = true
-		
+
 		// Relax all outgoing edges
 		for _, edge := range g.OutEdges(u) {
-			v := edge.V
-			alt := dist[u] + edge.W
-			
+			v := edge.To
+			alt := dist[u] + edge.Weight
+
 			if alt < dist[v] {
 				dist[v] = alt
 				if !visited[v] && items[v].index >= 0 {
@@ -96,41 +105,54 @@ func Dijkstra(g *Graph, source NodeID) map[NodeID]Dist {
 			}
 		}
 	}
-	
+
 	return dist
 }
 
-// DijkstraSingleSource is a simpler version that just computes distances from one source
-// and stores them in the provided dhat map (compatible with BMSSP interface)
+// DijkstraSingleSource computes shortest distances using Dijkstra's algorithm
+// with an interface compatible with BMSSP (uses pre-allocated distance map).
+//
+// Parameters:
+//   - g: input graph
+//   - source: source node for shortest path computation
+//   - dhat: distance map (modified in-place)
 func DijkstraSingleSource(g *Graph, source NodeID, dhat map[NodeID]Dist) {
 	visited := make(map[NodeID]bool)
 	items := make(map[NodeID]*dijkstraItem)
-	
+
 	// Initialize items for all nodes that appear in dhat
 	for node := range dhat {
-		items[node] = &dijkstraItem{node: node, dist: dhat[node]}
+		if node == source {
+			dhat[node] = 0
+			items[node] = &dijkstraItem{node: node, dist: 0}
+		} else if dhat[node] == 0 && node != source {
+			dhat[node] = INF
+			items[node] = &dijkstraItem{node: node, dist: INF}
+		} else {
+			items[node] = &dijkstraItem{node: node, dist: dhat[node]}
+		}
 	}
-	
+
 	// Create priority queue
 	pq := make(dijkstraHeap, 0, len(items))
 	for _, item := range items {
 		heap.Push(&pq, item)
 	}
-	
+
 	for pq.Len() > 0 {
 		item := heap.Pop(&pq).(*dijkstraItem)
 		u := item.node
-		
+
 		if visited[u] {
 			continue
 		}
 		visited[u] = true
-		
+
 		// Relax all outgoing edges
 		for _, edge := range g.OutEdges(u) {
-			v := edge.V
-			alt := dhat[u] + edge.W
-			
+			v := edge.To
+			alt := dhat[u] + edge.Weight
+
 			if alt < dhat[v] {
 				dhat[v] = alt
 				if !visited[v] && items[v] != nil && items[v].index >= 0 {
