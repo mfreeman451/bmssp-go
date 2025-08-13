@@ -1,0 +1,42 @@
+package bmssp
+
+import (
+	"math"
+	"testing"
+)
+
+func TestBMSSP_PaperExample(t *testing.T) {
+	// Build the Figure 1 example graph:
+	g := NewGraph()
+	edges := []struct {
+		u, v NodeID
+		w    Dist
+	}{
+		{0, 1, 2}, {0, 2, 5}, {1, 3, 4}, {2, 3, 1},
+		{1, 4, 1}, {3, 5, 3}, {4, 5, 2}, {5, 6, 1},
+		{6, 7, 1},
+	}
+	for _, e := range edges {
+		g.AddEdge(e.u, e.v, e.w)
+	}
+
+	// Initialize dhat
+	dhat := map[NodeID]Dist{}
+	for i := 0; i < 8; i++ {
+		dhat[NodeID(i)] = Dist(math.Inf(1))
+	}
+	dhat[0] = 0
+
+	S := NewNodeSet()
+	S.Add(0)
+
+	// Run BMSSP with appropriate parameters
+	_, _ = BMSSP(1, 1e9, S, 100, 1, g, dhat)
+
+	expected := []Dist{0, 2, 5, 6, 3, 5, 6, 7}
+	for i := 0; i < 8; i++ {
+		if math.Abs(float64(dhat[NodeID(i)]-expected[i])) > 1e-9 {
+			t.Errorf("node %d: expected dist %.0f, got %v", i, expected[i], dhat[NodeID(i)])
+		}
+	}
+}
